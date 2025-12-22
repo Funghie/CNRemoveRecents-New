@@ -1,0 +1,46 @@
+# Root EditorConfig
+root = true
+
+[*.cs]
+# Indentation and spacing
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Braces and block formatting
+csharp_style_braces_for_control_statements = true:error
+csharp_style_allow_embedded_statements_on_same_line = false:warning
+
+# var usage (enforced)
+dotnet_style_prefer_var_for_built_in_types = false:error
+dotnet_style_prefer_var_when_type_is_apparent = false:error
+dotnet_style_prefer_var_elsewhere = false:error
+
+# string interpolation
+csharp_style_prefer_interpolation = true:warning
+csharp_style_prefer_simplified_interpolation = true:warning
+
+# object creation preferences
+csharp_style_object_initializer = true:warning
+csharp_style_collection_initializer = true:warning
+
+# explicit type qualification
+dotnet_style_qualification_for_field = false:silent
+dotnet_style_qualification_for_property = false:silent
+dotnet_style_qualification_for_method = false:silent
+dotnet_style_qualification_for_event = false:silent
+
+# file header template
+file_header_template = Copyright (c) 2025 Phil Pendlebury\nEverything Creative\nLicensed under MIT
+
+# namespace style (block-scoped for .NET 4.8.1)
+csharp_style_namespace_declarations = block_scoped:warning
+
+# expression-bodied members (disabled for clarity)
+csharp_style_expression_bodied_methods = when_possible:silent
+csharp_style_expression_bodied_properties = when_possible:silent
+
+# naming conventions
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = none
+dotnet_diagnostic.IDE0003.severity = silent
