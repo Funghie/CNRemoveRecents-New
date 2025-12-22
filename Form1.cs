@@ -16,6 +16,7 @@ namespace CNRemoveRecents
     public partial class Form1 : Form
     {
         private readonly string iniPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
+        private const string AppVersion = "v2.1.1";
 
         private void SaveLastSelected(string value)
         {
@@ -192,14 +193,24 @@ namespace CNRemoveRecents
 
             try
             {
-                XDocument doc = XDocument.Load(defaultsPath);
-                var autoSavers = doc.Descendants("member").FirstOrDefault(x => (string)x.Attribute("name") == "AutoSavers");
-                var gRecent = autoSavers?.Elements("member").FirstOrDefault(x => (string)x.Attribute("name") == "GRecentDocumentPaths");
-                var pathsList = gRecent?.Elements("list").FirstOrDefault(x => (string)x.Attribute("name") == "Paths");
-                if (pathsList == null)
+                string xmlText = File.ReadAllText(defaultsPath);
+                int startIdx, endIdx;
+                string pathsListSection = ExtractPathsListSection(xmlText, out startIdx, out endIdx);
+                if (pathsListSection == null)
                 {
                     MessageBox.Show("Error!\nNo <list name=\"Paths\"> section found in this file", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
+                }
+                // Sanitize ampersands before parsing
+                string sanitizedSection = SanitizeAmpersandsInAttributes(pathsListSection);
+                XElement pathsList;
+                try
+                {
+                    pathsList = XElement.Parse(sanitizedSection);
+                }
+                catch (Exception)
+                {
+                    pathsList = XElement.Parse("<root>" + sanitizedSection + "</root>").Element("list");
                 }
                 // Remove relevant <item> elements (missing files)
                 var toRemove = new HashSet<(string name, string path)>();
@@ -227,7 +238,11 @@ namespace CNRemoveRecents
                         item.Remove();
                     }
                 }
-                doc.Save(defaultsPath);
+                // Serialize edited section
+                string newSection = pathsList.ToString();
+                // Replace section in original text
+                string newXmlText = ReplacePathsListSection(xmlText, newSection, startIdx, endIdx);
+                File.WriteAllText(defaultsPath, newXmlText);
                 comboBox1_SelectedIndexChanged(null, null);
             }
             catch (Exception ex)
@@ -247,14 +262,24 @@ namespace CNRemoveRecents
 
             try
             {
-                XDocument doc = XDocument.Load(defaultsPath);
-                var autoSavers = doc.Descendants("member").FirstOrDefault(x => (string)x.Attribute("name") == "AutoSavers");
-                var gRecent = autoSavers?.Elements("member").FirstOrDefault(x => (string)x.Attribute("name") == "GRecentDocumentPaths");
-                var pathsList = gRecent?.Elements("list").FirstOrDefault(x => (string)x.Attribute("name") == "Paths");
-                if (pathsList == null)
+                string xmlText = File.ReadAllText(defaultsPath);
+                int startIdx, endIdx;
+                string pathsListSection = ExtractPathsListSection(xmlText, out startIdx, out endIdx);
+                if (pathsListSection == null)
                 {
                     MessageBox.Show("Error!\nNo <list name=\"Paths\"> section found in this file", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
+                }
+                // Sanitize ampersands before parsing
+                string sanitizedSection = SanitizeAmpersandsInAttributes(pathsListSection);
+                XElement pathsList;
+                try
+                {
+                    pathsList = XElement.Parse(sanitizedSection);
+                }
+                catch (Exception)
+                {
+                    pathsList = XElement.Parse("<root>" + sanitizedSection + "</root>").Element("list");
                 }
                 // Remove relevant <item> elements (selected rows)
                 var toRemove = new HashSet<(string name, string path)>();
@@ -278,7 +303,11 @@ namespace CNRemoveRecents
                         item.Remove();
                     }
                 }
-                doc.Save(defaultsPath);
+                // Serialize edited section
+                string newSection = pathsList.ToString();
+                // Replace section in original text
+                string newXmlText = ReplacePathsListSection(xmlText, newSection, startIdx, endIdx);
+                File.WriteAllText(defaultsPath, newXmlText);
                 comboBox1_SelectedIndexChanged(null, null);
             }
             catch (Exception ex)
@@ -290,7 +319,7 @@ namespace CNRemoveRecents
         private void button3_Click(object sender, EventArgs e)
         {
             string instructions =
-                "Cubase Nuendo Remove Recents v2 by Phil Pendlebury\r\n" +
+                $"Cubase Nuendo Remove Recents {AppVersion} by Phil Pendlebury\r\n" +
                 "\r\n" +
                 "Select your application from the dropdown list\r\n" +
                 "The grid will then be populated with all projects that are in the recent projects area\r\n" +
@@ -414,6 +443,16 @@ namespace CNRemoveRecents
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
 
+        }
+
+        // Helper: Sanitize ampersands in attributes for XML parsing
+        private static string SanitizeAmpersandsInAttributes(string xmlSection)
+        {
+            // Replace & with &amp; in attribute values only
+            return System.Text.RegularExpressions.Regex.Replace(xmlSection,
+                "(&[^;]*)(?=>)",               // Look for & not followed by ; and before >
+                m => m.Value.Replace("&", "&amp;")
+            );
         }
     }
 }
