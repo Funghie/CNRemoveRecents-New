@@ -294,10 +294,9 @@ namespace CNRemoveRecents
                 "Select your application from the dropdown list\r\n" +
                 "The grid will then be populated with all projects that are in the recent projects area\r\n" +
                 "\r\n" +
-                "Projects that are in recent projects but no longer exist will be highlighted in red\r\n" +
-                "You will also see an X in the status column\r\n" +
+                "Projects that are in recent projects but no longer exist will be marked by an X and highlighted in red\r\n" +
                 "\r\n" +
-                "Projects that are in recent projects and do exist will be marked by a tick in the status column\r\n" +
+                "Projects that are in recent projects and do exist will be marked by a tick ✓ in the status column\r\n" +
                 "\r\n" +
                 "The latest project that exists in each folder is marked in the right hand column with an asterisk\r\n" +
                 "\r\n" +
@@ -305,7 +304,9 @@ namespace CNRemoveRecents
                 "The Defaults.xml will be first backed up to your desktop and then the file will be processed\r\n" +
                 "\r\n" +
                 "To remove only selected references, first select as many items as you like from the list, then click the Remove Selected button\r\n" +
-                "The Defaults.xml will be first backed up to your desktop and then the file will be processed";
+                "The Defaults.xml will be first backed up to your desktop and then the file will be processed\r\n" +
+                "\r\n" +
+                "You can sort the grid by any of the columns, this will not affect order when the Defaults.xml file is processed\r\n";
 
             MessageBox.Show(this, instructions, "Instructions", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
