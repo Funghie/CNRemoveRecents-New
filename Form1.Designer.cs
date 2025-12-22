@@ -109,7 +109,7 @@
             // 
             this.button1.Location = new System.Drawing.Point(12, 632);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(370, 44);
+            this.button1.Size = new System.Drawing.Size(420, 44);
             this.button1.TabIndex = 2;
             this.button1.Text = "Remove Missing";
             this.toolTip1.SetToolTip(this.button1, "Remove Missing (red items)\nThis will remove all missing projects from the recent " +
@@ -118,9 +118,9 @@
             // 
             // button2
             // 
-            this.button2.Location = new System.Drawing.Point(500, 632);
+            this.button2.Location = new System.Drawing.Point(450, 632);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(370, 44);
+            this.button2.Size = new System.Drawing.Size(420, 44);
             this.button2.TabIndex = 3;
             this.button2.Text = "Remove Selected";
             this.toolTip1.SetToolTip(this.button2, "Remove Selected (green items)\nThis will remove all selected projects from the rec" +

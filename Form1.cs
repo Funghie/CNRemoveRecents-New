@@ -183,7 +183,6 @@ namespace CNRemoveRecents
         private void button1_Click(object sender, EventArgs e)
         {
             BackupDefaultsXml();
-            // Remove <item> entries with missing files (statusColumn == "X")
             if (comboBox1.SelectedItem == null) return;
             string selectedFolder = comboBox1.SelectedItem.ToString();
             string steinbergPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steinberg");
@@ -192,25 +191,16 @@ namespace CNRemoveRecents
 
             try
             {
-                string xmlText = File.ReadAllText(defaultsPath);
-                int startIdx, endIdx;
-                string pathsListSection = ExtractPathsListSection(xmlText, out startIdx, out endIdx);
-                if (pathsListSection == null)
+                XDocument doc = XDocument.Load(defaultsPath);
+                var autoSavers = doc.Descendants("member").FirstOrDefault(x => (string)x.Attribute("name") == "AutoSavers");
+                var gRecent = autoSavers?.Elements("member").FirstOrDefault(x => (string)x.Attribute("name") == "GRecentDocumentPaths");
+                var pathsList = gRecent?.Elements("list").FirstOrDefault(x => (string)x.Attribute("name") == "Paths");
+                if (pathsList == null)
                 {
                     MessageBox.Show("Error!\nNo <list name=\"Paths\"> section found in this file", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                XElement pathsList;
-                try
-                {
-                    pathsList = XElement.Parse(pathsListSection);
-                }
-                catch (Exception)
-                {
-                    // Try to wrap in a dummy root if parsing fails
-                    pathsList = XElement.Parse("<root>" + pathsListSection + "</root>").Element("list");
-                }
-                // Build a HashSet of (Name, Path) pairs to remove
+                // Remove relevant <item> elements (missing files)
                 var toRemove = new HashSet<(string name, string path)>();
                 foreach (DataGridViewRow row in dataGridView1.Rows)
                 {
@@ -224,7 +214,6 @@ namespace CNRemoveRecents
                             toRemove.Add((name, path));
                     }
                 }
-                // Remove matching <item> elements
                 var items = pathsList.Elements("item").ToList();
                 foreach (var item in items)
                 {
@@ -237,11 +226,7 @@ namespace CNRemoveRecents
                         item.Remove();
                     }
                 }
-                // Replace section and write back
-                string newSection = pathsList.ToString();
-                string newXmlText = ReplacePathsListSection(xmlText, newSection, startIdx, endIdx);
-                File.WriteAllText(defaultsPath, newXmlText);
-                // Refresh columns after operation
+                doc.Save(defaultsPath);
                 comboBox1_SelectedIndexChanged(null, null);
             }
             catch (Exception ex)
@@ -253,7 +238,6 @@ namespace CNRemoveRecents
         private void button2_Click(object sender, EventArgs e)
         {
             BackupDefaultsXml();
-            // Remove <item> entries for selected rows
             if (comboBox1.SelectedItem == null) return;
             string selectedFolder = comboBox1.SelectedItem.ToString();
             string steinbergPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steinberg");
@@ -262,25 +246,16 @@ namespace CNRemoveRecents
 
             try
             {
-                string xmlText = File.ReadAllText(defaultsPath);
-                int startIdx, endIdx;
-                string pathsListSection = ExtractPathsListSection(xmlText, out startIdx, out endIdx);
-                if (pathsListSection == null)
+                XDocument doc = XDocument.Load(defaultsPath);
+                var autoSavers = doc.Descendants("member").FirstOrDefault(x => (string)x.Attribute("name") == "AutoSavers");
+                var gRecent = autoSavers?.Elements("member").FirstOrDefault(x => (string)x.Attribute("name") == "GRecentDocumentPaths");
+                var pathsList = gRecent?.Elements("list").FirstOrDefault(x => (string)x.Attribute("name") == "Paths");
+                if (pathsList == null)
                 {
                     MessageBox.Show("Error!\nNo <list name=\"Paths\"> section found in this file", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                XElement pathsList;
-                try
-                {
-                    pathsList = XElement.Parse(pathsListSection);
-                }
-                catch (Exception)
-                {
-                    // Try to wrap in a dummy root if parsing fails
-                    pathsList = XElement.Parse("<root>" + pathsListSection + "</root>").Element("list");
-                }
-                // Build a HashSet of (Name, Path) pairs to remove from selected rows
+                // Remove relevant <item> elements (selected rows)
                 var toRemove = new HashSet<(string name, string path)>();
                 foreach (DataGridViewRow row in dataGridView1.SelectedRows)
                 {
@@ -290,7 +265,6 @@ namespace CNRemoveRecents
                     if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(path))
                         toRemove.Add((name, path));
                 }
-                // Remove matching <item> elements
                 var items = pathsList.Elements("item").ToList();
                 foreach (var item in items)
                 {
@@ -303,11 +277,7 @@ namespace CNRemoveRecents
                         item.Remove();
                     }
                 }
-                // Replace section and write back
-                string newSection = pathsList.ToString();
-                string newXmlText = ReplacePathsListSection(xmlText, newSection, startIdx, endIdx);
-                File.WriteAllText(defaultsPath, newXmlText);
-                // Refresh columns after operation
+                doc.Save(defaultsPath);
                 comboBox1_SelectedIndexChanged(null, null);
             }
             catch (Exception ex)
@@ -437,6 +407,11 @@ namespace CNRemoveRecents
         private static string ReplacePathsListSection(string xmlText, string newSection, int startIdx, int endIdx)
         {
             return xmlText.Substring(0, startIdx) + newSection + xmlText.Substring(endIdx);
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }
