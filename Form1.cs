@@ -18,7 +18,7 @@ namespace CNRemoveRecents
     public partial class Form1 : Form
     {
         private readonly string iniPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-        private const string AppVersion = "v2.2.7";
+        private const string AppVersion = "v2.3.1";
 
         // INI settings
         private string lastFolder = null;
@@ -228,6 +228,29 @@ namespace CNRemoveRecents
             }
         }
 
+        private void BackupDefaultsXml_RecycleBin(string defaultsPath)
+        {
+            // 1. Copy file to temp
+            string tempCopy = Path.Combine(Path.GetTempPath(), $"Defaults.xml.{Guid.NewGuid()}.bak");
+            try
+            {
+                File.Copy(defaultsPath, tempCopy, true);
+                // 2. Move original to recycle bin
+                FileSystem.DeleteFile(defaultsPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                // 3. Copy file back from temp
+                File.Copy(tempCopy, defaultsPath, true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not complete Recycle Bin backup operation:\n{ex.Message}", "Backup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Clean up temp copy
+                try { if (File.Exists(tempCopy)) File.Delete(tempCopy); } catch { /* ignore */ }
+            }
+        }
+
         private void BackupDefaultsXml()
         {
             if (comboBox1.SelectedItem == null) return;
@@ -240,20 +263,7 @@ namespace CNRemoveRecents
 
             if (backupDir.Equals("RECYCLEBIN", StringComparison.OrdinalIgnoreCase))
             {
-                // Create backup in temp, then send to Recycle Bin
-                string tempDir = Path.GetTempPath();
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd.HH-mm-ss");
-                string backupFileName = $"Defaults.xml.{timestamp}.{selectedFolder}";
-                string tempBackupPath = Path.Combine(tempDir, backupFileName);
-                File.Copy(defaultsPath, tempBackupPath, true);
-                try
-                {
-                    FileSystem.DeleteFile(tempBackupPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Could not send backup to Recycle Bin:\n{ex.Message}", "Backup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                BackupDefaultsXml_RecycleBin(defaultsPath);
             }
             else
             {
