@@ -424,8 +424,8 @@ namespace CNRemoveRecents
                 "To edit the ini file which contains the backup location you can click on the << Select Application label " +
                 "\r\n\r\n" +
                 "Backup Location Options:\r\n" +
-                "(blank) or not set: Backups go to Desktop\\CNRRBackups\r\n" +
-                "A folder path: Backups go to that folder (e.g., D:\\MyBackups)\r\n" +
+                "Empty (Default): Backups go to Desktop\\CNRRBackups\r\n" +
+                "Path: Backups go to that folder (e.g., D:\\MyBackups)\r\n" +
                 "NONE: No backup is made\r\n" +
                 "RECYCLEBIN: Backup is sent directly to the Recycle Bin\r\n";
 
