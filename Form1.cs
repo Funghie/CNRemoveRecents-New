@@ -12,13 +12,14 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.VisualBasic.FileIO; // Added for Recycle Bin support
+using System.Runtime.InteropServices; // For natural sort
 
 namespace CNRemoveRecents
 {
     public partial class Form1 : Form
     {
         private readonly string iniPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-        private const string AppVersion = "v2.3.1";
+        private const string AppVersion = "v2.3.3";
 
         // INI settings
         private string lastFolder = null;
@@ -105,20 +106,35 @@ namespace CNRemoveRecents
             row.Cells["pathColumn"].Tag = filePath;   // Store full file path for later use
         }
 
+        // Helper: Natural string comparer using Windows API
+        private class NaturalStringComparer : IComparer<string>
+        {
+            [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+            private static extern int StrCmpLogicalW(string x, string y);
+            public int Compare(string x, string y) => StrCmpLogicalW(x, y);
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             string steinbergPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steinberg");
             if (Directory.Exists(steinbergPath))
             {
                 string[] dirs = Directory.GetDirectories(steinbergPath);
+                var folderNames = new List<string>();
                 foreach (string dir in dirs)
                 {
                     string folderName = Path.GetFileName(dir);
                     string defaultsPath = Path.Combine(dir, "Defaults.xml");
                     if (File.Exists(defaultsPath) && (folderName.StartsWith("Cubase") || folderName.StartsWith("Nuendo")))
                     {
-                        comboBox1.Items.Add(folderName);
+                        folderNames.Add(folderName);
                     }
+                }
+                folderNames.Sort(new NaturalStringComparer());
+                comboBox1.Items.Clear();
+                foreach (var folderName in folderNames)
+                {
+                    comboBox1.Items.Add(folderName);
                 }
             }
 
