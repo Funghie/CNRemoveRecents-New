@@ -480,6 +480,8 @@ namespace CNRemoveRecents
             // Prevent form resize
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+            // Set label1 text with AppVersion
+            label1.Text = $"Remove Cubase && Nuendo Recent Files {AppVersion} by Phil Pendlebury ";
         }
 
         // Highlight rows with "X" in statusColumn as light red
