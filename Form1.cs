@@ -11,13 +11,14 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using Microsoft.VisualBasic.FileIO; // Added for Recycle Bin support
 
 namespace CNRemoveRecents
 {
     public partial class Form1 : Form
     {
         private readonly string iniPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-        private const string AppVersion = "v2.2.4";
+        private const string AppVersion = "v2.2.7";
 
         // INI settings
         private string lastFolder = null;
@@ -236,11 +237,32 @@ namespace CNRemoveRecents
             if (!File.Exists(defaultsPath)) return;
             string backupDir = GetBackupLocation();
             if (string.IsNullOrWhiteSpace(backupDir)) return; // No backup if NONE
-            Directory.CreateDirectory(backupDir);
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd.HH-mm-ss");
-            string backupFileName = $"Defaults.xml.{timestamp}.{selectedFolder}";
-            string backupPath = Path.Combine(backupDir, backupFileName);
-            File.Copy(defaultsPath, backupPath, true);
+
+            if (backupDir.Equals("RECYCLEBIN", StringComparison.OrdinalIgnoreCase))
+            {
+                // Create backup in temp, then send to Recycle Bin
+                string tempDir = Path.GetTempPath();
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd.HH-mm-ss");
+                string backupFileName = $"Defaults.xml.{timestamp}.{selectedFolder}";
+                string tempBackupPath = Path.Combine(tempDir, backupFileName);
+                File.Copy(defaultsPath, tempBackupPath, true);
+                try
+                {
+                    FileSystem.DeleteFile(tempBackupPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Could not send backup to Recycle Bin:\n{ex.Message}", "Backup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(backupDir);
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd.HH-mm-ss");
+                string backupFileName = $"Defaults.xml.{timestamp}.{selectedFolder}";
+                string backupPath = Path.Combine(backupDir, backupFileName);
+                File.Copy(defaultsPath, backupPath, true);
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -392,14 +414,20 @@ namespace CNRemoveRecents
                 "The latest project that exists in each folder is marked in the right hand column with an asterisk\r\n" +
                 "\r\n" +
                 "To remove all project references that no longer exist, click the Remove Missing button\r\n" +
-                "The Defaults.xml will be first backed up to your desktop and then the file will be processed\r\n" +
+                "The Defaults.xml will be first backed up (see Backup Location Options below) and then the file will be processed\r\n" +
                 "\r\n" +
                 "To remove only selected references, first select as many items as you like from the list, then click the Remove Selected button\r\n" +
-                "The Defaults.xml will be first backed up to your desktop and then the file will be processed\r\n" +
+                "The Defaults.xml will be first backed up (see Backup Location Options below) and then the file will be processed\r\n" +
                 "\r\n" +
                 "You can sort the grid by any of the columns, this will not affect order when the Defaults.xml file is processed\r\n" +
                 "\r\n" +
-                "To edit the ini file which contains the backup loction you can click on the << Select Application label ";
+                "To edit the ini file which contains the backup location you can click on the << Select Application label " +
+                "\r\n\r\n" +
+                "Backup Location Options:\r\n" +
+                "(blank) or not set: Backups go to Desktop\\CNRRBackups\r\n" +
+                "A folder path: Backups go to that folder (e.g., D:\\MyBackups)\r\n" +
+                "NONE: No backup is made\r\n" +
+                "RECYCLEBIN: Backup is sent directly to the Recycle Bin\r\n";
 
             MessageBox.Show(this, instructions, "Instructions", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
