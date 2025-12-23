@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -16,21 +17,79 @@ namespace CNRemoveRecents
     public partial class Form1 : Form
     {
         private readonly string iniPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-        private const string AppVersion = "v2.1.1";
+        private const string AppVersion = "v2.2.4";
+
+        // INI settings
+        private string lastFolder = null;
+        private string backupLocation = null;
+
+        // Helper: Load INI settings
+        private void LoadIniSettings()
+        {
+            lastFolder = null;
+            backupLocation = null;
+            if (!File.Exists(iniPath)) return;
+            string[] lines = File.ReadAllLines(iniPath);
+            bool inSettings = false;
+            foreach (var line in lines)
+            {
+                string trimmed = line.Trim();
+                if (trimmed.StartsWith("[Settings]", StringComparison.OrdinalIgnoreCase))
+                {
+                    inSettings = true;
+                    continue;
+                }
+                if (!inSettings || string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#")) continue;
+                int eq = trimmed.IndexOf('=');
+                if (eq < 0) continue;
+                string key = trimmed.Substring(0, eq).Trim();
+                string val = trimmed.Substring(eq + 1).Trim();
+                if (key.Equals("Last Folder", StringComparison.OrdinalIgnoreCase))
+                    lastFolder = val;
+                else if (key.Equals("Backup Location", StringComparison.OrdinalIgnoreCase))
+                    backupLocation = val;
+            }
+        }
+
+        // Helper: Save INI settings
+        private void SaveIniSettings()
+        {
+            var lines = new List<string>
+            {
+                "[Settings]",
+                $"Last Folder={lastFolder ?? ""}",
+                $"Backup Location={backupLocation ?? ""}"
+            };
+            Directory.CreateDirectory(Path.GetDirectoryName(iniPath));
+            File.WriteAllLines(iniPath, lines);
+        }
 
         private void SaveLastSelected(string value)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(iniPath));
-            File.WriteAllText(iniPath, value ?? "");
+            LoadIniSettings();
+            lastFolder = value;
+            SaveIniSettings();
         }
 
         private string LoadLastSelected()
         {
-            if (File.Exists(iniPath))
+            LoadIniSettings();
+            return lastFolder;
+        }
+
+        private string GetBackupLocation()
+        {
+            LoadIniSettings();
+            string loc = backupLocation;
+            if (string.IsNullOrWhiteSpace(loc))
             {
-                return File.ReadAllText(iniPath).Trim();
+                // Default: Desktop\CNRRBackups
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                loc = Path.Combine(desktop, "CNRRBackups");
             }
-            return null;
+            if (loc.Equals("NONE", StringComparison.OrdinalIgnoreCase))
+                return null;
+            return loc;
         }
 
         private void AddRow(string name, string folderPath)
@@ -175,10 +234,12 @@ namespace CNRemoveRecents
             string steinbergPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Steinberg");
             string defaultsPath = Path.Combine(steinbergPath, selectedFolder, "Defaults.xml");
             if (!File.Exists(defaultsPath)) return;
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string backupDir = GetBackupLocation();
+            if (string.IsNullOrWhiteSpace(backupDir)) return; // No backup if NONE
+            Directory.CreateDirectory(backupDir);
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd.HH-mm-ss");
             string backupFileName = $"Defaults.xml.{timestamp}.{selectedFolder}";
-            string backupPath = Path.Combine(desktopPath, backupFileName);
+            string backupPath = Path.Combine(backupDir, backupFileName);
             File.Copy(defaultsPath, backupPath, true);
         }
 
@@ -336,9 +397,28 @@ namespace CNRemoveRecents
                 "To remove only selected references, first select as many items as you like from the list, then click the Remove Selected button\r\n" +
                 "The Defaults.xml will be first backed up to your desktop and then the file will be processed\r\n" +
                 "\r\n" +
-                "You can sort the grid by any of the columns, this will not affect order when the Defaults.xml file is processed\r\n";
+                "You can sort the grid by any of the columns, this will not affect order when the Defaults.xml file is processed\r\n" +
+                "\r\n" +
+                "To edit the ini file which contains the backup loction you can click on the << Select Application label ";
 
             MessageBox.Show(this, instructions, "Instructions", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!File.Exists(iniPath))
+                {
+                    // Create a default INI file if it doesn't exist
+                    SaveIniSettings();
+                }
+                Process.Start(new ProcessStartInfo(iniPath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open INI file:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         public Form1()
@@ -412,11 +492,6 @@ namespace CNRemoveRecents
             }
         }
 
-        private void label2_Click(object sender, EventArgs e)
-        {
-
-        }
-
         // Helper: Extract <list name="Paths">...</list> section from XML text
         private static string ExtractPathsListSection(string xmlText, out int startIdx, out int endIdx)
         {
@@ -438,11 +513,6 @@ namespace CNRemoveRecents
         private static string ReplacePathsListSection(string xmlText, string newSection, int startIdx, int endIdx)
         {
             return xmlText.Substring(0, startIdx) + newSection + xmlText.Substring(endIdx);
-        }
-
-        private void checkBox1_CheckedChanged(object sender, EventArgs e)
-        {
-
         }
 
         // Helper: Sanitize ampersands in attributes for XML parsing
